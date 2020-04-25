@@ -1,6 +1,5 @@
 ---
 title: "Stor 565 Final Project"
-author: "Julianna Cybrynski, Tiara Mathur, Jeffrey Mei"
 output:
   pdf_document: default
   html_document: default
