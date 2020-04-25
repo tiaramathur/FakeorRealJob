@@ -1,0 +1,285 @@
+---
+title: "Stor 565 Final Project"
+author: "Julianna Cybrynski, Tiara Mathur, Jeffrey Mei"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if(!require(ISLR)) { install.packages("ISLR", repos = "http://cran.us.r-project.org"); library("ISLR") }
+if(!require(leaps)) { install.packages("leaps", repos = "http://cran.us.r-project.org"); library("leaps") }
+if(!require(glmnet)) { install.packages("glmnet", repos = "http://cran.us.r-project.org"); library("glmnet") }
+if(!require(pls)) { install.packages("pls", repos = "http://cran.us.r-project.org"); library("pls") }
+if(!require(class)) { install.packages("class", repos = "http://cran.us.r-project.org"); library("class") }
+if(!require(e1071)) { install.packages("e1071", repos = "http://cran.us.r-project.org"); library("e1071") }
+if(!require(MASS)) { install.packages("MASS", repos = "http://cran.us.r-project.org"); library("MASS") }
+if(!require(InformationValue)) { install.packages("InformationValue", repos = "http://cran.us.r-project.org"); library("InformationValue") }
+if(!require(factoextra)) { install.packages("factoextra", repos = "http://cran.us.r-project.org"); library("factoextra") }
+if(!require(ggplot2)) { install.packages("ggplot2", repos = "http://cran.us.r-project.org"); library("ggplot2") }
+if(!require(klaR)) { install.packages("klaR", repos = "http://cran.us.r-project.org"); library("klaR") }
+
+```
+
+
+```{r}
+train <- read.csv("C:/Users/tiaram/Downloads/fake_job_postings_TRAIN.csv")  
+test <- read.csv("C:/Users/tiaram/Downloads/fake_job_postings_TEST.csv")
+```
+
+```{r}
+train <- data.frame(train)
+test <- data.frame(test)
+```
+
+```{r}
+trainx <- train[, c(6, 7, 8, 15, 16, 17, 18, 19, 20, 21, 22)]
+trainy <- train$fraudulent
+testx <- test[, c(6, 7, 8, 15, 16, 17, 18, 19, 20, 21, 22)]
+testy <- test$fraudulent
+ftrain <- cbind(trainx, trainy)
+ftest <- cbind(testx, testy)
+```
+
+#Linear regression with least squares, best subset selection, forward and backwards stepwise selection, and partial least squares regression
+
+```{r}
+modleastsq <- lm(trainy ~., data = ftrain)
+predictedmodlsq <- predict(modleastsq)
+mean((testy - predictedmodlsq)^2)
+```
+
+```{r}
+regfit <- regsubsets(trainy~., ftrain, nvmax = 10)
+result <- summary(regfit)
+result
+par(mfrow = c(1, 3))
+
+plot(result$cp, main = "Best Subset Selection", xlab = "Number of Variables", ylab = "Cp")
+points(which.min(result$cp), result$cp[which.min(result$cp)], col = "red", pch = 8)
+plot(result$bic, main = "Best Subset Selection", xlab = "Number of Variables", ylab = "BIC")
+points(which.min(result$bic), result$bic[which.min(result$bic)], col = "red", pch = 8)
+plot(result$adjr2, main = "Best Subset Selection", xlab = "Number of Variables", ylab = "Adj R^2")
+points(which.max(result$adjr2), result$adjr2[which.max(result$adjr2)], col = "red", pch = 8)
+
+coef(regfit, which.min(result$cp))
+coef(regfit, which.min(result$bic))
+coef(regfit, which.max(result$adjr2))
+
+regfit2 <- regsubsets(trainy~., ftrain, nvmax = 10, method = "forward")
+fwdsummary <- summary(regfit2)
+par(mfrow = c(1, 3))
+
+plot(fwdsummary$cp, main = "Forwards Stepwise Selection", xlab = "Number of Variables", ylab = "Cp")
+points(which.min(fwdsummary$cp), fwdsummary$cp[which.min(fwdsummary$cp)], col = "red", pch = 8)
+plot(fwdsummary$bic, main = "Forwards Stepwise Selection", xlab = "Number of Variables", ylab = "BIC")
+points(which.min(fwdsummary$bic), fwdsummary$bic[which.min(fwdsummary$bic)], col = "red", pch = 8)
+plot(fwdsummary$adjr2, main = "Forwards Stepwise Selection", xlab = "Number of Variables", ylab = "Adjusted R^2")
+points(which.max(fwdsummary$adjr2), fwdsummary$adjr2[which.max(fwdsummary$adjr2)], col = "red", pch = 8)
+
+coef(regfit2, which.min(fwdsummary$cp))
+coef(regfit2, which.min(fwdsummary$bic))
+coef(regfit2, which.max(fwdsummary$adjr2))
+
+regfit3 <- regsubsets(trainy~., ftrain, nvmax = 10, method = "backward")
+bwdsummary <- summary(regfit3)
+par(mfrow = c(1, 3))
+
+plot(bwdsummary$cp, main = "Backwards Stepwise Selection", xlab = "Number of Variables", ylab = "Cp")
+points(which.min(bwdsummary$cp), bwdsummary$cp[which.min(bwdsummary$cp)], col = "red", pch = 8)
+plot(bwdsummary$bic, main = "Backwards Stepwise Selection", xlab = "Number of Variables", ylab = "BIC")
+points(which.min(bwdsummary$bic), bwdsummary$bic[which.min(bwdsummary$bic)], col = "red", pch = 8)
+plot(bwdsummary$adjr2, main = "Backwards Stepwise Selection", xlab = "Number of Variables", ylab = "Adjusted R^2")
+points(which.max(bwdsummary$adjr2), bwdsummary$adjr2[which.max(bwdsummary$adjr2)], col = "red", pch = 8)
+
+coef(regfit3, which.min(bwdsummary$cp))
+coef(regfit3, which.min(bwdsummary$bic))
+coef(regfit3, which.max(bwdsummary$adjr2))
+
+```
+
+```{r}
+modsubsets <- lm(trainy ~ telecommuting + has_company_logo + has_questions + Sentiment.Analysis..Company.Profile + Sentiment.Analysis..Requirements + Text.length..Company.Profile +       Text.length..Description + Text.length..Requirements + Text.length..Benefits, data = ftrain)
+predictedmodsubsets <- predict(modsubsets)
+mean((testy - predictedmodsubsets)^2)
+```
+
+```{r}
+pls.fit = plsr(trainy~., data=ftrain, scale=T, validation="CV")
+validationplot(pls.fit, val.type="MSEP", main = "Best number of components of PLS", col = "blue")
+```
+
+```{r}
+pls.pred = predict(pls.fit, ftrain, ncomp=3)
+mean((testy - (pls.pred))^2)
+```
+
+Creating a least squares linear regression model gives us a test error of 0.04981329 and using the features most commonly selected by best subset selection, forward stepwise selection, and backwards stepwise selection gives us a test error of 0.04982897. Partial least squares regression with the best number of components, 3,  gives us a test error of 0.04981387. These are higher error estimates than other, better models and there are also a number of issues with using linear regression to solve a classification problem. For one, it predicts continuous values instead of a number 0 or 1, and we do not even have an interpretation for other values. 0 represents a job that is legitimate and 1 represents a job that is fraudulent, so if our model predicts values such as 2.45 or -1 for example, we would have no way to interpret what this prediction value is telling us. Linear regression is also quite sensitive to imbalanced data, so especially depending on the sample, it is inclined to give a worse prediction than a classification model such as logistic regression which has a curve that is more optimal for binary classification. Finally, as we can see in our models, choosing the best subset of features caused 9 variables to be selected - a quite large number, since only 2 were excluded, and partial least squares selected three components. Yet still the test error from using a model with only these variables was higher than the test error from using a model with all numerical variables. This means there was a significant discrepancy between the low training errors and high test errors which reflects high variance and a tendency for overfitting, so these models would likely perform worse on additional data, which is the opposite of our goal in machine learning.
+
+```{r}
+ggplot(ftrain,aes(y=trainy,x=Sentiment.Analysis..Company.Profile,color=factor(telecommuting), size=Sentiment.Analysis..Requirements, fill=Text.length..Benefits, alpha=Text.length..Description, shape=factor(has_company_logo), stroke=factor(has_questions)))+geom_point()+stat_smooth(method="lm")
+```
+
+For example in this plot created from the best subset of variables selected, we can see that linear regression creates straight lines that do not visually fit the shape of the data, which is limited to values on the y-axis of 0 and 1, and the shadow of the lines shows standard error, which is quite large. 
+
+#Logistic regression
+
+```{r}
+logitMod <- glm(trainy~., data=ftrain, family=binomial(link="logit"))
+predicted <- plogis(predict(logitMod, ftest)) 
+optCutOff <- optimalCutoff(testy, predicted)[1] 
+misClassError(testy, predicted, threshold = optCutOff)
+```
+
+```{r}
+plotROC(testy, predicted)
+```
+
+```{r}
+c <- confusionMatrix(testy, predicted, threshold = optCutOff)
+c
+```
+```{r}
+falsepos = 2/(2+4252)
+falseneg = 206/(206+10)
+falsepos
+falseneg
+```
+Logistic regression gives us an error rate of 0.0465, and a false positive rate of 0.0004701457. However, it gives an extremely high false negative rate of 0.9537037. Logistic regression is a better model which is more suited for classification, but this model's false negative rate is concerning because 95.37% of the job positngs it cleared as legitime were actually fraudulent, and this could cause someone seeking employment who used this model to put themselves at serious risk by applying to an alarming number of fake jobs that they believed to be real.
+
+#Linear and Quadratic Disciminant Analysis
+
+```{r}
+ldamodel = lda(as.factor(trainy)~., data=ftrain)
+ldapred = predict(ldamodel, newdata=ftest)
+mean(ldapred$class!=testy)
+```
+
+```{r}
+ldadf = cbind.data.frame(testy, ldapred$class, stringsAsFactors = FALSE)
+```
+
+```{r}
+fpfn <- function(df) {
+  lowhigh = as.integer(0) # low classified as high
+  highlow = as.integer(0) # high classified as low
+  low = as.integer(0) # actually low
+  high = as.integer(0) # actually high
+  
+  for (row in 1:nrow(df)){
+    tru <- df[row, 1]
+    predc <- df[row, 2]
+    if (tru == 0) {
+      low <- low + 1
+      if (predc == 1) {
+        lowhigh <- lowhigh + 1
+      }
+    } else {
+      high <- high + 1
+      if (predc == 0) {
+        highlow <- highlow + 1
+      }
+    }
+  }
+  falsepositive = lowhigh/low
+  falsenegative = highlow/high
+  print("False positive rate:")
+  print(falsepositive)
+  print("False negative rate:")
+  print(falsenegative)
+}
+```
+
+```{r}
+fpfn(ldadf)
+```
+
+```{r}
+qdamodel = qda(as.factor(trainy)~., data=ftrain)
+qdapred = predict(qdamodel, newdata=ftest)
+mean(qdapred$class!=testy)
+qdadf = cbind.data.frame(testy, qdapred$class, stringsAsFactors = FALSE)
+```
+
+```{r}
+fpfn(qdadf)
+```
+
+For linear discriminant analysis, the test error is 0.04720358, which is higher than other models. False positive rate is 0.0007052186, which is quite low, but false negative rate is 0.962963 which is very high. Quadratic discriminant analysis has a quite higher test error of 0.0876957. The false positive rate is also quite higher at 0.06464504, but the false negative rate is quite lower, 0.5416667. However, false negatives (where a job was classified as 0 for not fraudulent, when it should have a classification value of 1 for fraudulent) should be considered more important than false positives, because while skipping an application to a company with a background that does not seem real but actually turns out to be legitimate would not cause actual harm, on the other hand giving personal information to even one illegitimate company can cause harm to the applicant and there is a high chance of fraud and identity theft.
+
+```{r}
+smalltrain <- ftrain[,c(6:9)]
+partimat(factor(trainy)~.,data=smalltrain,method="lda")
+```
+
+```{r}
+smalltrain <- ftrain[,c(6:9)]
+partimat(factor(trainy)~.,data=smalltrain,method="qda")
+```
+These plots show the partition from LDA and QDA on a subset of the features in the dataset. It is hard to clearly view the partitions in LDA, but for QDA partitions are more evident and clearly seperate a group of non-fraudulent job points. Therefore, we can see how there are less false negatives in QDA.
+
+#Support Vector Machines with linear and radial basis kernels
+
+```{r}
+strainx <- trainx[c(1:400),]
+strainy <- trainy[c(1:400)]
+```
+
+
+```{r}
+linsvmmod <- tune.svm(x = strainx, y = as.factor(strainy), kernel = "linear", cost = c(0.001,0.1,1,10,100), tunecontrol=tune.control(sampling = "cross"), cross=10)
+summary(linsvmmod)
+```
+
+```{r}
+radsvmmod <- tune.svm(x = strainx, y = as.factor(strainy), kernel = "radial", degree = c(0.001,0.1,1,10,100), gamma = c(0.001,0.1,1,10,100), cost = c(0.001,0.1,1,10,100), tunecontrol=tune.control(sampling = "cross"), cross=10)
+summary(radsvmmod)
+```
+Support vector machines using a linear and radial basis kernel with optimal values of degree, gamma, and cost selected from {0.001, 0.1, 1, 10, 100} had an error of 0.05 and 0.055 respectively. However, these models were very computationally intense and required a smaller training set to be used in order to avoid running out of memory, which limits the amount of information the model has to learn from and limits how accurate these models have the capability to be.
+
+#Principal Component Analysis
+```{r}
+ztrain <- ftrain[c(1:500),]
+ztest <- ftest[c(1:500),]
+colnames(ztrain)[12] <- "yval"
+colnames(ztest)[12] <- "yval"
+
+res.pca <- prcomp(ztrain, scale = TRUE)
+```
+
+```{r}
+fviz_pca_ind(res.pca,
+             col.ind = "cos2", # Color by the quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE   
+             )
+```
+
+
+```{r}
+fviz_pca_var(res.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE   
+             )
+```
+
+```{r}
+ind.sup.coord <- predict(res.pca, newdata = ztest)
+p <- fviz_pca_ind(res.pca)
+fviz_add(p, ind.sup.coord, color ="blue")
+```
+
+```{r}
+groups <- as.factor(ztest$yval)
+fviz_pca_ind(res.pca,
+             col.ind = groups, # color by groups
+             palette = c("#00AFBB",  "#FC4E07"),
+             addEllipses = TRUE, # Concentration ellipses
+             ellipse.type = "confidence",
+             legend.title = "Groups"
+             )
+```
+Principal Component Analysis does a decent job in certain areas separating the fake jobs from real jobs, but overall there is too much overlap in the predicted groups for this to be an effective model.
+
